@@ -24,7 +24,7 @@ class GMF:
                                                                 name='embedding_P', dtype=tf.float32)
             self.embedding_Q = tf.Variable(tf.truncated_normal(shape=[self.num_items, self.embedding_size], mean=0.0, stddev=0.01),
                                                                 name='embedding_Q', dtype=tf.float32)
-            self.h = tf.Variable(tf.zeros(self.embedding_size),name='h')  //how to initialize it
+            self.h = tf.Variable(tf.zeros(self.embedding_size),name='h')  #how to initialize it
     def _create_inference(self):
         with tf.name_scope("inference"):
             self.embedding_p = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_P, self.user_input), 1)
@@ -71,8 +71,7 @@ class MLP:
                                                                 name='embedding_P', dtype=tf.float32)  #(num_users, embedding_size)
             self.embedding_Q = tf.Variable(tf.truncated_normal(shape=[self.num_items, self.embedding_size], mean=0.0, stddev=0.01),
                                                                 name='embedding_Q', dtype=tf.float32)
-            self.h = tf.Variable(tf.truncated_normal(shape=[1, self.weight_size[-1]], mean=0.0, stddev=0.01),
-                                 dtype=tf.float32, name='h')  #(1,w[-1]) how to initialize it
+            self.h = tf.Variable(tf.ones([self.weight_size[-1], 1]), dtype=tf.float32, name='h')  #(1,w[-1]) how to initialize it
             self.W, self.b = [], []
             self.weight_sizes = [self.num_users + self.num_items] + self.weight_size
             for i in range(self.num_layer):
