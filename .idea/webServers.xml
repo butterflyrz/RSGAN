@@ -3,7 +3,15 @@
   <component name="WebServers">
     <option name="servers">
       <webServer id="6ab147f2-4e3c-4c41-96b4-d560f2502c37" name="NUS SoC" url="http://xcnc22.comp.nus.edu.sg">
-        <fileTransfer host="xcnc22.comp.nus.edu.sg" port="22" rootFolder="/home/x/xiangw/HeZhankui" accessType="SFTP">
+        <fileTransfer host="xcnc22.comp.nus.edu.sg" port="22" rootFolder="/home/x/xiangw" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+      <webServer id="fc5aa9ca-bf2e-48c4-bcbc-f2ce9a2e6d0f" name="NUS SoC2" url="http://xcnc30.comp.nus.edu.sg">
+        <fileTransfer host="xcnc30.comp.nus.edu.sg" port="22" rootFolder="/home/x/xiangw" accessType="SFTP">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" />
           </advancedOptions>

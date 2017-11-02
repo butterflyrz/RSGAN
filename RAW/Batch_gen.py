@@ -94,7 +94,6 @@ def _get_train_data_user():
                 labels.append(0)
     return num_items, user_input, item_input, labels, batch_length
 
-
 def _get_train_batch_user(i):
     #represent the feature of users via items rated by him/her
     user_list, num_list, item_list, labels_list = [],[],[],[]

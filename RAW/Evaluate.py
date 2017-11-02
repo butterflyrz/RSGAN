@@ -4,6 +4,7 @@ Evaluate the performance of Top-K recommendation:
     Protocol: leave-1-out evaluation
     Measures: Hit Ratio and NDCG
     (more details are in: Xiangnan He, et al. Fast Matrix Factorization for Online Recommendation with Implicit Feedback. SIGIR'16)
+
 @author: hexiangnan
 '''
 import math
@@ -18,10 +19,8 @@ _model = None
 _testRatings = None
 _testNegatives = None
 _K = None
-_DictList = None
-_sess = None
 
-def init_evaluate_model(model, sess, testRatings, testNegatives, trainList):
+def evaluate_model(model, testRatings, testNegatives, K, num_thread):
     """
     Evaluate the performance (Hit_Ratio, NDCG) of top-K recommendation
     Return: score of each test rating.
@@ -29,108 +28,57 @@ def init_evaluate_model(model, sess, testRatings, testNegatives, trainList):
     global _model
     global _testRatings
     global _testNegatives
-    global _trainList
-    global _DictList
-    global _sess
-    _sess = sess
-    _model = model
-    _testRatings = testRatings
-    _testNegatives = testNegatives
-    _trainList = trainList
-    return load_test_as_list()
-
-def eval(model, sess, testRatings, testNegatives, DictList):
-
-    global _model
-    global _testRatings
-    global _testNegatives
     global _K
-    global _DictList
-    global _sess
     _model = model
     _testRatings = testRatings
     _testNegatives = testNegatives
-    _DictList = DictList
-    _sess = sess
-    _K = 10
-
-    num_thread = 1#multiprocessing.cpu_count()
-    hits, ndcgs, losses, attentions = [],[],[],[[],[]]
+    _K = K
+        
+    hits, ndcgs = [],[]
     if(num_thread > 1): # Multi-thread
-        pool = multiprocessing.Pool(num_thread)
-        res = pool.map(_eval_one_rating, range(len(_testRatings)))
+        pool = multiprocessing.Pool(processes=num_thread)
+        res = pool.map(eval_one_rating, range(len(_testRatings)))
         pool.close()
         pool.join()
         hits = [r[0] for r in res]
         ndcgs = [r[1] for r in res]
-        losses = [r[2] for r in res]
+        return (hits, ndcgs)
     # Single thread
-    else:
-        for idx in xrange(len(_testRatings)):
-            (hr,ndcg, loss,attention) = _eval_one_rating(idx)
-            if _model.logAttention:
-                attentions[0].append(attention[0][-1])
-                attentions[1].append(attention[1][-1])
-            hits.append(hr)
-            ndcgs.append(ndcg)  
-            losses.append(loss)    
-    return (hits, ndcgs, losses, attentions)
-
-def load_test_as_list():
-    DictList = []
     for idx in xrange(len(_testRatings)):
-        rating = _testRatings[idx]
-        items = _testNegatives[idx]
-        user = _trainList[idx]
-        num_idx_ = len(user)
-        gtItem = rating[1]
-        items.append(gtItem)
-        # Get prediction scores
-        num_idx = np.full(len(items),num_idx_, dtype=np.int32 )[:,None]
-        user_input = []
-        for i in range(len(items)):
-            user_input.append(user)
-        user_input = np.array(user_input)
-        item_input = np.array(items)[:,None]
-        feed_dict = {_model.user_input: user_input, _model.num_idx: num_idx, _model.item_input: item_input}
-        DictList.append(feed_dict)
-    print("already load the evaluate model...")
-    return DictList
+        (hr,ndcg) = eval_one_rating(idx)
+        hits.append(hr)
+        ndcgs.append(ndcg)      
+    return (hits, ndcgs)
 
-def _eval_one_rating(idx):
-
-    map_item_score = {}
+def eval_one_rating(idx):
     rating = _testRatings[idx]
     items = _testNegatives[idx]
+    u = rating[0]
     gtItem = rating[1]
-    labels = np.zeros(len(items))[:, None]
-    labels[-1] = 1
-    feed_dict = _DictList[idx]
-    feed_dict[_model.labels] = labels
-    attention = [[],[]]
-    if _model.logAttention:
-        predictions,loss,attention[0],attention[1] = _sess.run([_model.output, _model.loss, _model.A, _model.A_], feed_dict = feed_dict)
-    else:
-        predictions,loss = _sess.run([_model.output, _model.loss], feed_dict = feed_dict)
-
+    items.append(gtItem)
+    # Get prediction scores
+    map_item_score = {}
+    users = np.full(len(items), u, dtype = 'int32')
+    predictions = _model.predict([users, np.array(items)], 
+                                 batch_size=100, verbose=0)
     for i in xrange(len(items)):
         item = items[i]
         map_item_score[item] = predictions[i]
-    # items.pop()
+    items.pop()
+    
     # Evaluate top rank list
-
     ranklist = heapq.nlargest(_K, map_item_score, key=map_item_score.get)
-    hr = _getHitRatio(ranklist, gtItem)
-    ndcg = _getNDCG(ranklist, gtItem)
-    return (hr, ndcg, loss, attention)
+    hr = getHitRatio(ranklist, gtItem)
+    ndcg = getNDCG(ranklist, gtItem)
+    return (hr, ndcg)
 
-def _getHitRatio(ranklist, gtItem):
+def getHitRatio(ranklist, gtItem):
     for item in ranklist:
         if item == gtItem:
             return 1
     return 0
 
-def _getNDCG(ranklist, gtItem):
+def getNDCG(ranklist, gtItem):
     for i in xrange(len(ranklist)):
         item = ranklist[i]
         if item == gtItem:
