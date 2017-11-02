@@ -30,13 +30,13 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run RSGAN.")
     parser.add_argument('--path', nargs='?', default='Data/',
                         help='Input data path.')
-    parser.add_argument('--dataset', nargs='?', default='pinterest-20',
+    parser.add_argument('--dataset', nargs='?', default='ml-1m',
                         help='Choose a dataset.')
-    parser.add_argument('--model', nargs='?', default='MLP',
+    parser.add_argument('--model', nargs='?', default='GMF',
                         help='Choose model: GMF, MLP, FISM')
     parser.add_argument('--loss_func', nargs='?', default='logloss',
                         help='Choose loss: logloss, BPR')
-    parser.add_argument('--batch_gen', nargs='?', default='fixed',
+    parser.add_argument('--batch_gen', nargs='?', default='unfixed',
                         help='Coose batch gen: fixed, unfixed')
     parser.add_argument('--pretrain', type=int, default=1,
                         help='0: No pretrain, 1: Pretrain with updating FISM variables, 2:Pretrain with fixed FISM variables.')
@@ -48,22 +48,16 @@ def parse_args():
                         help='user: generate batches by user, fixed:batch_size: generate batches by batch size')
     parser.add_argument('--epochs', type=int, default=100,
                         help='Number of epochs.')
-    parser.add_argument('--weight_size', type=int, default=8,
-                        help='weight size.')
     parser.add_argument('--embed_size', type=int, default=16,
                         help='Embedding size.')
-    parser.add_argument('--data_alpha', type=float, default=0,
-                        help='Index of coefficient of embedding vector')
-    parser.add_argument('--layer_size', nargs='?', default='[16, 8]',
+    parser.add_argument('--layer_size', nargs='?', default='[32,16,8]',
                         help='Output sizes of every layer')
-    parser.add_argument('--regs', nargs='?', default='[1e-7,1e-7,0]',
+    parser.add_argument('--regs', nargs='?', default='[0,0,0]',
                         help='Regularization for user and item embeddings.')
     parser.add_argument('--alpha', type=float, default=0,
                         help='Index of coefficient of embedding vector')
     parser.add_argument('--train_loss', type=float, default=1,
                         help='Caculate training loss or not')
-    parser.add_argument('--beta', type=float, default=0.5,
-                        help='Index of coefficient of sum of exp(A)')
     parser.add_argument('--num_neg', type=int, default=4,
                         help='Number of negative instances to pair with a positive instance.')
     parser.add_argument('--lr', type=float, default=0.01,

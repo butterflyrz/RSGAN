@@ -100,6 +100,7 @@ class Dataset(object):
                     items.append(i)
                 line = f.readline()
         lists.append(items)
+        print lists[0]
         print "already load the trainList..."
         return lists
 
