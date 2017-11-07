@@ -18,11 +18,12 @@ class GMF:
         regs = eval(args.regs)
         self.lambda_bilinear = regs[0]
         self.gamma_bilinear = regs[1]
+        self.fix = args.batch_gen
 
     def _create_placeholders(self):
         with tf.name_scope("input_data"):
             self.user_input = tf.placeholder(tf.int32, shape = [None, 1], name = "user_input")
-            self.item_input = tf.placeholder(tf.int32, shape = [None, 1], name = "item_input")
+            self.item_input = tf.placeholder(tf.int32, shape = [None, None], name = "item_input")
             self.labels = tf.placeholder(tf.float32, shape = [None, 1], name = "labels")  #(b,1)
     def _create_variables(self):
         with tf.name_scope("embedding"):
@@ -33,21 +34,27 @@ class GMF:
             #self.h = tf.Variable(tf.ones([self.embedding_size, 1]), name='h', dtype=tf.float32)  #how to initialize it  (embedding_size, 1)
             self.h = tf.Variable(tf.random_uniform([self.embedding_size, 1], minval = -tf.sqrt(3/self.embedding_size),
                                                    maxval = tf.sqrt(3/self.embedding_size)), name = 'h')
-    def _create_inference(self):
+    def _create_inference(self, item_input):
         with tf.name_scope("inference"):
             self.embedding_p = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_P, self.user_input), 1)
-            self.embedding_q = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_Q, self.item_input), 1) #(b, embedding_size)
-            self.output = tf.sigmoid(tf.matmul(self.embedding_p*self.embedding_q, self.h))  #(b, embedding_size) * (embedding_size, 1)
+            self.embedding_q = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_Q, item_input), 1) #(b, embedding_size)
+            res = tf.sigmoid(tf.matmul(self.embedding_p*self.embedding_q, self.h))  #(b, embedding_size) * (embedding_size, 1)
+            return res
 
     def _create_loss(self):
         with tf.name_scope("loss"):
-            if self.loss_func == "logloss":
-                self.loss = tf.losses.log_loss(self.labels, self.output) + self.lambda_bilinear * tf.reduce_sum(
-                                tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
-            # elif self.loss_func == "BPR":
-            # else :
-            #     print "Don't build Loss Function!"
-
+            if self.fix == "logloss":
+                self.output = self._create_inference(self.item_input)
+                self.loss = tf.losses.log_loss(self.labels, self.output) + \
+                            self.lambda_bilinear * tf.reduce_sum(
+                                tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(
+                    tf.square(self.embedding_Q))
+            else:
+                self.output = self._create_inference(self.item_input[:, 0])
+                self.output_neg = self._create_inference(self.item_input[:, -1])
+                self.result = self.output - self.output_neg
+                self.loss = tf.sigmoid(self.result) + self.lambda_bilinear * tf.reduce_sum(
+                    tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
     def _create_optimizer(self):
         with tf.name_scope("optimizer"):
             # self.optimizer = tf.train.AdagradOptimizer(learning_rate=self.learning_rate, initial_accumulator_value=1e-8).minimize(self.loss)
@@ -56,10 +63,8 @@ class GMF:
     def build_graph(self):
         self._create_placeholders()
         self._create_variables()
-        self._create_inference()
         self._create_loss()
         self._create_optimizer()
-
 
 class MLP:
     def __init__(self,num_users, num_items, args):
@@ -73,11 +78,12 @@ class MLP:
         self.gamma_bilinear = regs[1]
         self.weight_size = eval(args.layer_size)
         self.num_layer = len(self.weight_size)
+        self.fix = args.batch_gen
 
     def _create_placeholders(self):
         with tf.name_scope("input_data"):
             self.user_input = tf.placeholder(tf.int32, shape = [None, 1], name = "user_input")  #(b, 1)
-            self.item_input = tf.placeholder(tf.int32, shape = [None, 1], name = "item_input")
+            self.item_input = tf.placeholder(tf.int32, shape = [None, None], name = "item_input")
             self.labels = tf.placeholder(tf.float32, shape = [None, 1], name = "labels")
 
     def _create_variables(self):
@@ -95,10 +101,10 @@ class MLP:
                                                    maxval = tf.sqrt(6/(self.weight_sizes[i]+self.weight_sizes[i+1]))), name='W' + str(i), dtype=tf.float32) #(2*embed_size, W[1]) (w[i],w[i+1])
                 self.b[i] = tf.Variable(tf.zeros([1,self.weight_sizes[i+1]]), dtype=tf.float32, name='b' + str(i))  # (1, W[i+1])
 
-    def _create_inference(self):
+    def _create_inference(self, item_input):
         with tf.name_scope("inference"):
             self.embedding_p = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_P, self.user_input),1)  #(b, embedding_size)
-            self.embedding_q = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_Q, self.item_input),1)  #(b, embedding_size)
+            self.embedding_q = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_Q, item_input),1)  #(b, embedding_size)
 
             self.z = []
             z_temp = tf.concat([self.embedding_p, self.embedding_q], 1)  #(b, 2*embed_size)
@@ -107,17 +113,21 @@ class MLP:
             for i in range(self.num_layer):
                 z_temp = tf.nn.relu(tf.matmul(self.z[i], self.W[i]) + self.b[i]) #(b, W[i]) * (W[i], W[i+1]) + (1, W[i+1]) => (b, W[i+1])
                 self.z.append(z_temp)
-            self.output = tf.sigmoid(tf.matmul(z_temp, self.h)) # (b, W[-1]) * (W[-1], 1) => (b, 1)
+            return tf.sigmoid(tf.matmul(z_temp, self.h)) # (b, W[-1]) * (W[-1], 1) => (b, 1)
 
     def _create_loss(self):
         with tf.name_scope("loss"):
-            if self.loss_func == "logloss":
+            if self.fix == "logloss":
+                self.output = self._create_inference(self.item_input)
                 self.loss = tf.losses.log_loss(self.labels, self.output) + \
                             self.lambda_bilinear*tf.reduce_sum(tf.square(self.embedding_P)) + self.gamma_bilinear*tf.reduce_sum(tf.square(self.embedding_Q))
-            # elif self.loss_func == "BPR":
-            #     self.loss =
-            # else:
-            #     print "Don't build loss function!"
+            else:
+                self.output = self._create_inference(self.item_input[:,0])
+                print self.output
+                self.output_neg = self._create_inference(self.item_input[:,-1])
+                self.result = self.output - self.output_neg
+                self.loss = tf.sigmoid(self.result)+ self.lambda_bilinear * tf.reduce_sum(
+                                tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
 
     def _create_optimizer(self):
         with tf.name_scope("optimizer"):
@@ -127,7 +137,6 @@ class MLP:
     def build_graph(self):
         self._create_placeholders()
         self._create_variables()
-        self._create_inference()
         self._create_loss()
         self._create_optimizer()
 
@@ -144,9 +153,8 @@ class FISM:
         self.gamma_bilinear = regs[1]
         self.batch_choice = args.batch_choice
         self.train_loss = args.train_loss
-        self.logAttention = 0
-        self.ckpt = args.checkpoint
         self.loss_func = args.loss_func
+        self.fix = args.batch_gen
 
     def _create_placeholders(self):
         with tf.name_scope("input_data"):

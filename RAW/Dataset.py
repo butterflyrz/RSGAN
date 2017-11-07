@@ -86,18 +86,18 @@ class Dataset(object):
         lists, items = [], []
         with open(filename, "r") as f:
             line = f.readline()
-            index = 0
+            # index = 0
             while line != None and line != "":
                 arr = line.split("\t")
                 u, i = int(arr[0]), int(arr[1])
                 if u_ < u:
-                    index = 0
+                    # index = 0
                     lists.append(items)
                     items = []
                     u_ += 1
-                index += 1
-                if index<300:
-                    items.append(i)
+                # index += 1
+                # if index<300:
+                #     items.append(i)
                 line = f.readline()
         lists.append(items)
         print lists[0]

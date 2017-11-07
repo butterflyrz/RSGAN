@@ -25,7 +25,21 @@ def init_evaluate_model(model, dataset):
     DictList = []
     for idx in xrange(len(dataset.testRatings)):
         user, gtItem = dataset.testRatings[idx]
-        items = dataset.testNegatives[idx]
+        if model.fix == 'fixed':
+            items = dataset.testNegatives[idx]
+        else:
+            pos_samples = sorted(dataset.trainList[idx])
+            items = range(dataset.num_items)
+            for i in items[::-1]:
+                if not pos_samples:
+                    break;
+                elif pos_samples[-1] == i:
+                    del items[i]
+                    pos_samples.pop()
+                elif pos_samples[-1] > i:
+                    pos_samples.pop()
+                if i == gtItem:
+                    del items[i]
         items.append(gtItem)
         # Get prediction scores
         labels = np.zeros(len(items))[:, None]
@@ -69,8 +83,9 @@ def eval(model, sess, dataset, DictList):
 
 def _eval_one_rating(idx):
     map_item_score = {}
-    items = _dataset.testNegatives[idx]  #have been appended
-    gtItem = items[-1]
+    items = _DictList[idx][_model.item_input]  #have been appended
+    gtItem = _dataset.testRatings[idx][1]
+    items = (np.sum(items,axis = 1)).tolist()
     predictions,loss = _sess.run([_model.output, _model.loss], feed_dict = _DictList[idx])
 
     for i in xrange(len(items)):

@@ -10,22 +10,36 @@ _index = None
 
 # input: dataset(Mat, List, Rating, Negatives), batch_choice, num_negatives
 # output: [_user_input_list, _item_input_list, _labels_list]
-def sampling(dataset, num_negatives):
+def sampling(args, dataset, num_negatives):
     _user_input, _item_input, _labels = [], [], []
     num_users, num_items =  dataset.trainMatrix.shape
-    for (u, i) in dataset.trainMatrix.keys():
-        # positive instance
-        _user_input.append(u)
-        _item_input.append(i)
-        _labels.append(1)
-        # negative instances
-        for t in xrange(num_negatives):
+    if args.loss_func == "BPR":
+        for (u, i) in dataset.trainMatrix.keys():
+            # positive instance
+            item_pair = []
+            _user_input.append(u)
+            item_pair.append(i)
+            _labels.append(1)
+            # negative instances
             j = np.random.randint(num_items)
             while dataset.trainMatrix.has_key((u, j)):
                 j = np.random.randint(num_items)
+            item_pair.append(j)
+            _item_input.append(item_pair)
+    else:
+        for (u, i) in dataset.trainMatrix.keys():
+            # positive instance
             _user_input.append(u)
-            _item_input.append(j)
-            _labels.append(0)
+            _item_input.append(i)
+            _labels.append(1)
+            # negative instances
+            for t in xrange(num_negatives):
+                j = np.random.randint(num_items)
+                while dataset.trainMatrix.has_key((u, j)):
+                    j = np.random.randint(num_items)
+                _user_input.append(u)
+                _item_input.append(j)
+                _labels.append(0)
     return _user_input, _item_input, _labels
 
 def shuffle(samples, batch_size, dataset = None):

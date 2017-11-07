@@ -30,7 +30,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run RSGAN.")
     parser.add_argument('--path', nargs='?', default='Data/',
                         help='Input data path.')
-    parser.add_argument('--dataset', nargs='?', default='ml-1m',
+    parser.add_argument('--dataset', nargs='?', default='yelp',
                         help='Choose a dataset.')
     parser.add_argument('--model', nargs='?', default='GMF',
                         help='Choose model: GMF, MLP, FISM')
@@ -73,13 +73,12 @@ def training(model, dataset, args):
         print "initialized"
         writer = tf.summary.FileWriter('./graphs', sess.graph)
 
-
         # initialize for training batches
         if args.batch_gen == "fixed":
             if args.model == "FISM":
-                samples = BatchItem.sampling(dataset, args.num_neg)
+                samples = BatchItem.sampling(args, dataset, args.num_neg)
             else:
-                samples = BatchUser.sampling(dataset, args.num_neg)
+                samples = BatchUser.sampling(args, dataset, args.num_neg)
 
         # initialize for Evaluate
         if args.model == "FISM":
@@ -93,14 +92,13 @@ def training(model, dataset, args):
             batch_begin = time()
             if args.model == "FISM":
                 if args.batch_gen == "unfixed":
-                    samples = BatchItem.sampling(dataset, args.num_neg)
+                    samples = BatchItem.sampling(args, dataset, args.num_neg)
                 batches = BatchItem.shuffle(samples, args.batch_size, dataset)
-            if args.batch_gen == "fixed" and args.model != "FISM":
+            else :
                 if args.batch_gen == "unfixed":
-                    samples = BatchUser.sampling(dataset, args.num_neg)
+                    samples = BatchUser.sampling(args, dataset, args.num_neg)
                 batches = BatchUser.shuffle(samples, args.batch_size)
             batch_time = time() - batch_begin
-
             train_begin = time()
             training_batch(model, sess, batches, args)
             train_time = time() - train_begin
@@ -140,10 +138,16 @@ def training_batch(model, sess, batches, args):
             sess.run(model.optimizer, feed_dict)
     else:
         user_input, item_input, labels = batches
-        for i in range(len(labels)):
-            feed_dict = {model.user_input: user_input[i][:, None],
-                         model.item_input: item_input[i][:, None],
-                         model.labels: labels[i][:, None]}
+        if args.loss_func == "logloss":
+            for i in range(len(labels)):
+                feed_dict = {model.user_input: user_input[i][:, None],
+                             model.item_input: item_input[i][:, None],
+                             model.labels: labels[i][:, None]}
+        else:
+            for i in range(len(labels)):
+                feed_dict = {model.user_input: user_input[i][:, None],
+                             model.item_input: item_input[i],
+                             model.labels: labels[i][:, None]}
             sess.run(model.optimizer, feed_dict)
 
 # input: model, sess, batches
@@ -161,11 +165,18 @@ def training_loss(model, sess, batches, args):
             train_loss += sess.run(model.loss, feed_dict)
     else:
         user_input, item_input, labels = batches
-        for i in range(len(labels)):
-            feed_dict = {model.user_input: user_input[i][:, None],
-                         model.item_input: item_input[i][:, None],
-                         model.labels: labels[i][:, None]}
-            train_loss += sess.run(model.loss, feed_dict)
+        if args.loss_func == "logloss":
+            for i in range(len(labels)):
+                feed_dict = {model.user_input: user_input[i][:, None],
+                             model.item_input: item_input[i][:, None],
+                             model.labels: labels[i][:, None]}
+        else:
+            for i in range(len(labels)):
+                feed_dict = {model.user_input: user_input[i][:, None],
+                             model.item_input: item_input[i],
+                             model.labels: labels[i][:, None]}
+        train_loss += sess.run(model.loss, feed_dict)
+
     return train_loss / num_batch
 
 def init_logging(args):

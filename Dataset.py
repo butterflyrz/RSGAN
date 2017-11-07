@@ -102,5 +102,3 @@ class Dataset(object):
         lists.append(items)
         print "already load the trainList..."
         return lists
-
-
