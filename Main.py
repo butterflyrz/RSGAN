@@ -20,6 +20,7 @@ import Evaluate.EvaluateItem as EvalItem
 import Evaluate.EvaluateUser as EvalUser
 
 from Dataset import Dataset
+from saver import GMFSaver
 
 import argparse
 
@@ -64,7 +65,7 @@ def parse_args():
                         help='Learning rate.')
     return parser.parse_args()
 
-def training(model, dataset, args):
+def training(model, dataset, args, saver = None): # saver is an object to save pq
 
     with tf.Session() as sess:
         # pretrain nor not
@@ -123,6 +124,8 @@ def training(model, dataset, args):
                         epoch_count, batch_time, train_time, hr, ndcg, test_loss, eval_time, train_loss, loss_time))
                 print "Epoch %d [%.1fs + %.1fs]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1fs] train_loss = %.4f [%.1fs]" % (
                         epoch_count, batch_time, train_time, hr, ndcg, test_loss, eval_time, train_loss, loss_time)
+        if saver != None:
+            saver.save(model, sess)
 
 # input: batch_index (shuffled), model, sess, batches
 # do: train the model optimizer
@@ -216,4 +219,7 @@ if __name__ == '__main__':
     model.build_graph()
 
     #start trainging
-    training(model, dataset, args)
+    saver = GMFSaver()
+    saver.setPrefix("./param")
+    training(model, dataset, args, saver)
+
