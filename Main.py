@@ -118,12 +118,11 @@ def training(model, dataset, args):
                     hits, ndcgs, losses = EvalUser.eval(model, sess, dataset, EvalDict)
                 hr, ndcg, test_loss = np.array(hits).mean(), np.array(ndcgs).mean(), np.array(losses).mean()
                 eval_time = time() - eval_begin
-
                 logging.info(
                     "Epoch %d [%.1fs + %.1fs]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1fs] train_loss = %.4f [%.1fs]" % (
                         epoch_count, batch_time, train_time, hr, ndcg, test_loss, eval_time, train_loss, loss_time))
                 print "Epoch %d [%.1fs + %.1fs]: HR = %.4f, NDCG = %.4f, loss = %.4f [%.1fs] train_loss = %.4f [%.1fs]" % (
-                    epoch_count, batch_time, train_time, hr, ndcg, test_loss, eval_time, train_loss, loss_time)
+                        epoch_count, batch_time, train_time, hr, ndcg, test_loss, eval_time, train_loss, loss_time)
 
 # input: batch_index (shuffled), model, sess, batches
 # do: train the model optimizer
@@ -143,12 +142,14 @@ def training_batch(model, sess, batches, args):
                 feed_dict = {model.user_input: user_input[i][:, None],
                              model.item_input: item_input[i][:, None],
                              model.labels: labels[i][:, None]}
+                sess.run(model.optimizer, feed_dict)
+
         else:
             for i in range(len(labels)):
                 feed_dict = {model.user_input: user_input[i][:, None],
                              model.item_input: item_input[i],
                              model.labels: labels[i][:, None]}
-            sess.run(model.optimizer, feed_dict)
+                sess.run(model.optimizer, feed_dict)
 
 # input: model, sess, batches
 # output: training_loss
@@ -160,7 +161,7 @@ def training_loss(model, sess, batches, args):
         for i in range(len(labels)):
             feed_dict = {model.user_input: user_input[i],
                          model.num_idx: num_idx[i][:, None],
-                         model.item_input: item_input[i][:, None],
+                         model.item_input: item_input[iF][:, None],
                          model.labels: labels[i][:, None]}
             train_loss += sess.run(model.loss, feed_dict)
     else:
@@ -170,12 +171,15 @@ def training_loss(model, sess, batches, args):
                 feed_dict = {model.user_input: user_input[i][:, None],
                              model.item_input: item_input[i][:, None],
                              model.labels: labels[i][:, None]}
+                train_loss += sess.run(model.loss, feed_dict)
         else:
             for i in range(len(labels)):
                 feed_dict = {model.user_input: user_input[i][:, None],
                              model.item_input: item_input[i],
                              model.labels: labels[i][:, None]}
-        train_loss += sess.run(model.loss, feed_dict)
+                loss = sess.run(model.loss, feed_dict)
+                # train_loss += sess.run(model.loss, feed_dict)
+                train_loss += loss
 
     return train_loss / num_batch
 

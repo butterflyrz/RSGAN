@@ -25,7 +25,7 @@ def init_evaluate_model(model, dataset):
     DictList = []
     for idx in xrange(len(dataset.testRatings)):
         user, gtItem = dataset.testRatings[idx]
-        if model.fix == 'fixed':
+        if 1:
             items = dataset.testNegatives[idx]
         else:
             pos_samples = sorted(dataset.trainList[idx])
@@ -86,7 +86,8 @@ def _eval_one_rating(idx):
     items = _DictList[idx][_model.item_input]  #have been appended
     gtItem = _dataset.testRatings[idx][1]
     items = (np.sum(items,axis = 1)).tolist()
-    predictions,loss = _sess.run([_model.output, _model.loss], feed_dict = _DictList[idx])
+    predictions = _sess.run(_model.output, feed_dict = _DictList[idx])
+    loss = 0
 
     for i in xrange(len(items)):
         item = items[i]
