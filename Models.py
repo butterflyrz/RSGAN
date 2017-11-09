@@ -47,15 +47,15 @@ class GMF:
             if self.loss_func == "logloss":
                 self.output = self._create_inference(self.item_input)
                 self.loss = tf.losses.log_loss(self.labels, self.output) + \
-                            self.lambda_bilinear * tf.reduce_sum(
-                                tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(
-                    tf.square(self.embedding_Q))
+                            self.lambda_bilinear * tf.reduce_sum(tf.square(self.embedding_P)) + \
+                            self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
             else:
                 self.output = self._create_inference(self.item_input[:, 0])
                 self.output_neg = self._create_inference(self.item_input[:, -1])
                 self.result = self.output - self.output_neg
-                self.loss = tf.sigmoid(self.result) + self.lambda_bilinear * tf.reduce_sum(
-                    tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
+                self.loss = tf.reduce_sum(tf.sigmoid(self.result) + self.lambda_bilinear * tf.reduce_sum(
+                    tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q)))
+
     def _create_optimizer(self):
         with tf.name_scope("optimizer"):
             # self.optimizer = tf.train.AdagradOptimizer(learning_rate=self.learning_rate, initial_accumulator_value=1e-8).minimize(self.loss)

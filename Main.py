@@ -161,7 +161,7 @@ def training_loss(model, sess, batches, args):
         for i in range(len(labels)):
             feed_dict = {model.user_input: user_input[i],
                          model.num_idx: num_idx[i][:, None],
-                         model.item_input: item_input[iF][:, None],
+                         model.item_input: item_input[i][:, None],
                          model.labels: labels[i][:, None]}
             train_loss += sess.run(model.loss, feed_dict)
     else:
