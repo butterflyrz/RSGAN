@@ -31,11 +31,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run RSGAN.")
     parser.add_argument('--path', nargs='?', default='Data/',
                         help='Input data path.')
-    parser.add_argument('--dataset', nargs='?', default='yelp',
+    parser.add_argument('--dataset', nargs='?', default='ml-1m',
                         help='Choose a dataset.')
     parser.add_argument('--model', nargs='?', default='GMF',
                         help='Choose model: GMF, MLP, FISM')
-    parser.add_argument('--loss_func', nargs='?', default='logloss',
+    parser.add_argument('--loss_func', nargs='?', default='BPR',
                         help='Choose loss: logloss, BPR')
     parser.add_argument('--batch_gen', nargs='?', default='unfixed',
                         help='Coose batch gen: fixed, unfixed')
@@ -43,11 +43,11 @@ def parse_args():
                         help='0: No pretrain, 1: Pretrain with updating FISM variables, 2:Pretrain with fixed FISM variables.')
     parser.add_argument('--verbose', type=int, default=1,
                         help='Interval of evaluation.')
-    parser.add_argument('--batch_size', type=int, default='256',
+    parser.add_argument('--batch_size', type=int, default=256,
                         help='batch_size')
     parser.add_argument('--batch_choice', nargs='?', default='user',
                         help='user: generate batches by user, fixed:batch_size: generate batches by batch size')
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=500,
                         help='Number of epochs.')
     parser.add_argument('--embed_size', type=int, default=16,
                         help='Embedding size.')
@@ -55,6 +55,8 @@ def parse_args():
                         help='Output sizes of every layer')
     parser.add_argument('--regs', nargs='?', default='[0,0,0]',
                         help='Regularization for user and item embeddings.')
+    parser.add_argument('--task', nargs='?', default='',
+                        help='Add the task name for launching experiments')
     parser.add_argument('--alpha', type=float, default=0,
                         help='Index of coefficient of embedding vector')
     parser.add_argument('--train_loss', type=float, default=1,
@@ -145,6 +147,7 @@ def training_batch(model, sess, batches, args):
                 feed_dict = {model.user_input: user_input[i][:, None],
                              model.item_input: item_input[i][:, None],
                              model.labels: labels[i][:, None]}
+                # sess.run(model.optimizer, feed_dict)
                 sess.run(model.optimizer, feed_dict)
 
         else:
@@ -188,11 +191,11 @@ def training_loss(model, sess, batches, args):
 
 def init_logging(args):
     regs = eval(args.regs)
-    path = "Log/%s/%s" % (args.dataset, args.model)
+    path = "Log/%s_%s/" % (strftime('%Y-%m-%d_%H', localtime()), args.task)
     if not os.path.exists(path):
         os.makedirs(path)
-    logging.basicConfig(filename=path + "/log_pre%dembed_size%d_reg1%.7f_reg2%.7f_%s" % (
-        args.pretrain, args.embed_size, regs[0], regs[1], strftime('%Y-%m-%d%H:%M:%S', localtime())),
+    logging.basicConfig(filename=path + "%s_%s_log_pre%dembed_size%d_reg1%.7f_reg2%.7f%s" % (
+        args.dataset, args.model, args.pretrain, args.embed_size, regs[0], regs[1],strftime('%Y_%m_%d_%H_%M_%S', localtime())),
                         level=logging.INFO)
     logging.info("begin training %s model ......" % args.model)
     logging.info("dataset:%s  pretrain:%d  embedding_size:%d"
@@ -221,5 +224,5 @@ if __name__ == '__main__':
     #start trainging
     saver = GMFSaver()
     saver.setPrefix("./param")
-    training(model, dataset, args, saver)
+    training(model, dataset, args)
 

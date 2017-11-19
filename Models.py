@@ -39,7 +39,7 @@ class GMF:
     def _create_inference(self, item_input):
         with tf.name_scope("inference"):
             self.embedding_p = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_P, self.user_input), 1)
-            self.embedding_q = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_Q, self.item_input), 1) #(b, embedding_size)
+            self.embedding_q = tf.reduce_sum(tf.nn.embedding_lookup(self.embedding_Q, item_input), 1) #(b, embedding_size)
             return tf.sigmoid(tf.matmul(self.embedding_p*self.embedding_q, self.h))  #(b, embedding_size) * (embedding_size, 1)
 
     def _create_loss(self):
@@ -49,20 +49,21 @@ class GMF:
                 self.loss = tf.losses.log_loss(self.labels, self.output) + \
                             self.lambda_bilinear * tf.reduce_sum(tf.square(self.embedding_P)) + \
                             self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
-            else:
-                self.output = self._create_inference(self.item_input[:, 0])
-                self.output_neg = self._create_inference(self.item_input[:, -1])
+            else:  # loss_func == "BPR"
+                self.output = self._create_inference(tf.expand_dims(self.item_input[:, 0], axis = 1))
+                self.output_neg = self._create_inference(tf.expand_dims(self.item_input[:, -1], axis = 1))
                 self.result = self.output - self.output_neg
-                self.loss = tf.reduce_sum(tf.sigmoid(self.result) + self.lambda_bilinear * tf.reduce_sum(
-                    tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q)))
+                self.loss = tf.reduce_sum(tf.log(1 + tf.exp(-self.result))) \
+                                    + self.lambda_bilinear*tf.reduce_sum(tf.square(self.embedding_P)) \
+                                    + self.gamma_bilinear*tf.reduce_sum(tf.square(self.embedding_Q))
+
 
     def _create_optimizer(self):
         with tf.name_scope("optimizer"):
-            # self.optimizer = tf.train.AdagradOptimizer(learning_rate=self.learning_rate, initial_accumulator_value=1e-8).minimize(self.loss)
             if self.loss_func == "logloss":
                 self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
             else :
-                self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+                self.optimizer = tf.train.AdagradOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
     def build_graph(self):
         self._create_placeholders()
@@ -125,20 +126,23 @@ class MLP:
             if self.loss_func == "logloss":
                 self.output = self._create_inference(self.item_input)
                 self.loss = tf.losses.log_loss(self.labels, self.output) + \
-                            self.lambda_bilinear*tf.reduce_sum(tf.square(self.embedding_P)) + self.gamma_bilinear*tf.reduce_sum(tf.square(self.embedding_Q))
+                            self.lambda_bilinear * tf.reduce_sum(tf.square(self.embedding_P)) + \
+                            self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
             else:
-                self.output = self._create_inference(self.item_input[:,0])
-                self.output_neg = self._create_inference(self.item_input[:,-1])
+                self.output = self._create_inference(tf.expand_dims(self.item_input[:, 0], axis = 1))
+                self.output_neg = self._create_inference(tf.expand_dims(self.item_input[:, -1], axis = 1))
                 self.result = self.output - self.output_neg
-                self.loss = tf.sigmoid(self.result)+ self.lambda_bilinear * tf.reduce_sum(
-                                tf.square(self.embedding_P)) + self.gamma_bilinear * tf.reduce_sum(tf.square(self.embedding_Q))
+                self.loss = tf.reduce_sum(tf.log(1 + tf.exp(-self.result))) \
+                                    + self.lambda_bilinear*tf.reduce_sum(tf.square(self.embedding_P)) \
+                                    + self.gamma_bilinear*tf.reduce_sum(tf.square(self.embedding_Q))
+
 
     def _create_optimizer(self):
         with tf.name_scope("optimizer"):
             if self.loss_func == "logloss":
                 self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
             else :
-                self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+                self.optimizer = tf.train.AdagradOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
     def build_graph(self):
         self._create_placeholders()
         self._create_variables()
