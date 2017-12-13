@@ -11,6 +11,7 @@ from time import localtime
 
 from Models import FISM
 from Models import GMF
+from Models import MF
 from Models import MLP
 
 import BatchGen.BatchGenItem as BatchItem
@@ -20,7 +21,7 @@ import Evaluate.EvaluateItem as EvalItem
 import Evaluate.EvaluateUser as EvalUser
 
 from Dataset import Dataset
-from saver import GMFSaver
+from saver import SaverFactory
 
 import argparse
 
@@ -65,6 +66,7 @@ def parse_args():
                         help='Number of negative instances to pair with a positive instance.')
     parser.add_argument('--lr', type=float, default=0.01,
                         help='Learning rate.')
+    parser.add_argument('--param_prefix', default="params", help='save params to ...')
     return parser.parse_args()
 
 def training(model, dataset, args, saver = None): # saver is an object to save pq
@@ -219,10 +221,11 @@ if __name__ == '__main__':
         model = GMF(dataset.num_users, dataset.num_items, args)
     elif args.model == "MLP" :
         model = MLP(dataset.num_users, dataset.num_items, args)
+    elif args.model == "MF":
+        model = MF(dataset.num_users, dataset.num_items, args)
     model.build_graph()
 
-    #start trainging
-    saver = GMFSaver()
-    saver.setPrefix("./param")
-    training(model, dataset, args)
-
+    #start training
+    saver = SaverFactory.getSaver(model)
+    saver.setPrefix(args.param_prefix)
+    training(model, dataset, args, saver)
