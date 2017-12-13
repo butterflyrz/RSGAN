@@ -24,11 +24,13 @@ _DictList = None
 def init_evaluate_model(model,  dataset):
     DictList = []
     for idx in xrange(len(dataset.testRatings)):
-        rating = dataset.testRatings[idx]
+        user, gtItem = dataset.testRatings[idx]
         if model.fix == 'fixed':
             items = dataset.testNegatives[idx]
         else:
             items = range(dataset.num_items)
+            pos_samples = []
+            pos_samples.append(dataset.trainList[idx])
             for i in items[::-1]:
                 if not pos_samples:
                     break;
@@ -40,7 +42,6 @@ def init_evaluate_model(model,  dataset):
         items.append(gtItem)
         user = dataset.trainList[idx]
         num_idx_ = len(user)
-        gtItem = rating[1]
         # Get prediction scores
         num_idx = np.full(len(items),num_idx_, dtype=np.int32 )[:,None]
         labels = np.zeros(len(items))[:, None]
