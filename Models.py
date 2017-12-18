@@ -7,8 +7,19 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 import numpy as np
 
+class ModelFactory(object):
+    @staticmethod
+    def getModel(model):
+        if model == "GMF":
+            return GMF()
+        elif model == "MLP":
+            return MLP()
+        elif model == "FISM":
+            return FISM()
+        else:
+            return Model()
 
-class GMF:
+class Model(object):
     def __init__(self, num_users, num_items, args):
         self.loss_func = args.loss_func
         self.num_items = num_items
@@ -18,10 +29,11 @@ class GMF:
         regs = eval(args.regs)
         self.lambda_bilinear = regs[0]
         self.gamma_bilinear = regs[1]
-        self.loss_func = args.loss_func
+        self.weight_size = eval(args.layer_size)
         self.fix = args.batch_gen
 
 
+class GMF:
     def _create_placeholders(self):
         with tf.name_scope("input_data"):
             self.user_input = tf.placeholder(tf.int32, shape = [None, 1], name = "user_input")
@@ -57,7 +69,6 @@ class GMF:
                                     + self.lambda_bilinear*tf.reduce_sum(tf.square(self.embedding_P)) \
                                     + self.gamma_bilinear*tf.reduce_sum(tf.square(self.embedding_Q))
 
-
     def _create_optimizer(self):
         with tf.name_scope("optimizer"):
             if self.loss_func == "logloss":
@@ -71,19 +82,11 @@ class GMF:
         self._create_loss()
         self._create_optimizer()
 
-class MLP:
+class MLP(Model):
     def __init__(self,num_users, num_items, args):
-        self.loss_func = args.loss_func
-        self.num_items = num_items
-        self.num_users = num_users
-        self.embedding_size = args.embed_size
-        self.learning_rate = args.lr
-        regs = eval(args.regs)
-        self.lambda_bilinear = regs[0]
-        self.gamma_bilinear = regs[1]
+        super(MLP,self).__init__(num_users, num_items, args)
         self.weight_size = eval(args.layer_size)
         self.num_layer = len(self.weight_size)
-        self.fix = args.batch_gen
 
 
     def _create_placeholders(self):
@@ -150,21 +153,6 @@ class MLP:
         self._create_optimizer()
 
 class FISM:
-    def __init__(self, num_items, args):
-        self.num_items = num_items
-        self.dataset_name = args.dataset
-        self.learning_rate = args.lr
-        self.embedding_size = args.embed_size
-        self.alpha = args.alpha
-        self.verbose = args.verbose
-        regs = eval(args.regs)
-        self.lambda_bilinear = regs[0]
-        self.gamma_bilinear = regs[1]
-        self.batch_choice = args.batch_choice
-        self.train_loss = args.train_loss
-        self.loss_func = args.loss_func
-        self.fix = args.batch_gen
-
     def _create_placeholders(self):
         with tf.name_scope("input_data"):
             self.user_input = tf.placeholder(tf.int32, shape=[None, None])	#the index of users
@@ -195,10 +183,6 @@ class FISM:
             if self.loss_func == "logloss":
                 self.loss = tf.losses.log_loss(self.labels, self.output) + \
                             self.lambda_bilinear*tf.reduce_sum(tf.square(self.embedding_Q)) + self.gamma_bilinear*tf.reduce_sum(tf.square(self.embedding_Q_))
-            # elif self.loss_func == "BPR":
-            #     self.loss =
-            # else:
-            #     print "Don't build loss function!"
 
     def _create_optimizer(self):
         with tf.name_scope("optimizer"):
