@@ -2,8 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="6ab147f2-4e3c-4c41-96b4-d560f2502c37" name="NUS SoC" url="http://xcnc22.comp.nus.edu.sg">
-        <fileTransfer host="xcnc22.comp.nus.edu.sg" port="22" rootFolder="/home/x/xiangw" accessType="SFTP">
+      <webServer id="6ab147f2-4e3c-4c41-96b4-d560f2502c37" name="NUS SoC" url="http://xcnc23.comp.nus.edu.sg">
+        <fileTransfer host="xcnc23.comp.nus.edu.sg" port="22" rootFolder="/home/x/xiangw" accessType="SFTP">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" />
           </advancedOptions>

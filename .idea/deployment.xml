@@ -5,14 +5,7 @@
       <paths name="NUS SoC">
         <serverdata>
           <mappings>
-            <mapping deploy="/HeZhankui/RSGAN" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="NUS SoC2">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/HeZhankui/RSGAN_factory" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
