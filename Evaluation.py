@@ -68,7 +68,7 @@ class ItemBasedEvaluation(Evaluation):
             else:
                 self.K = 100  # HR@10
                 items = set(range(dataset.num_items)) - set(dataset.trainList[user])
-                if gtItem in items: items.remove(gtItem)
+                items.discard(gtItem)
                 items = list(items)
 
             # add the leave out one positive sample
@@ -106,7 +106,7 @@ class UserBasedEvaluation(Evaluation):
             else: # all ranking evaluation
                 self.K = 100  # HR@10
                 items = set(range(dataset.num_items)) - set(dataset.trainList[user])
-                if gtItem in items: items.remove(gtItem)
+                items.discard(gtItem)
                 items = list(items)
 
             # add the leave out one positive sample
